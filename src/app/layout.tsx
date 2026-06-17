@@ -53,6 +53,8 @@ export default function RootLayout({
   );
 }
 
+import { RouteGuard } from "@/components/auth/RouteGuard";
+
 // Separate component so we can use hooks inside AuthProvider
 function AppLayoutShell({ children }: { children: React.ReactNode }) {
   return (
@@ -61,7 +63,9 @@ function AppLayoutShell({ children }: { children: React.ReactNode }) {
         <AppSidebar />
         <main className="flex-1 pb-20 md:pb-0 relative overflow-x-hidden">
           <div className="container mx-auto px-4 py-8">
-            {children}
+            <RouteGuard>
+              {children}
+            </RouteGuard>
           </div>
         </main>
       </div>
