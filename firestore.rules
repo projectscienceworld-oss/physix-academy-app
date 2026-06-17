@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ───────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isTeacher() {
+      return isSignedIn() && getUserData().role == 'teacher';
+    }
+
+    function isStudent() {
+      return isSignedIn() && getUserData().role == 'student';
+    }
+
+    // Check teacher owns the batch
+    function teacherOwnsBatch(batchId) {
+      return isTeacher() && exists(/databases/$(database)/documents/classes/$(batchId)) &&
+        get(/databases/$(database)/documents/classes/$(batchId)).data.teacher_id == request.auth.uid;
+    }
+
+    // Check student belongs to a batch
+    function studentInBatch(batchId) {
+      return isStudent() && batchId in getUserData().batch_ids;
+    }
+
+    // ─── Users Collection ────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Any signed-in user can read their own profile
+      allow read: if isSignedIn() && isOwner(userId);
+      // Teachers can read any user in their batch (for student progress view)
+      allow read: if isTeacher();
+      // Users can only create their own profile on signup
+      allow create: if isSignedIn() && isOwner(userId);
+      // Users can update their own profile but NOT change their role or score
+      allow update: if isSignedIn() && isOwner(userId)
+        && !('role' in request.resource.data.diff(resource.data).affectedKeys());
+    }
+
+    // ─── Classes Collection ──────────────────────────────────────────────────
+    match /classes/{classId} {
+      // Teachers can read/write/create their own classes
+      allow read, write: if isTeacher() &&
+        (resource == null || resource.data.teacher_id == request.auth.uid);
+      allow create: if isTeacher();
+      // Students can read class they belong to (to get batch info)
+      allow read: if isStudent() && classId in getUserData().batch_ids;
+    }
+
+    // ─── Materials Collection ────────────────────────────────────────────────
+    match /materials/{materialId} {
+      // Teacher who owns the batch can read/write
+      allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
+      allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
+      // Students in the batch can read only
+      allow read: if isStudent() && studentInBatch(resource.data.batch_id);
+      // Students can update ONLY the completed_by array (marking completion)
+      allow update: if isStudent() && studentInBatch(resource.data.batch_id)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed_by']);
+    }
+
+    // ─── Questions Collection ────────────────────────────────────────────────
+    match /questions/{questionId} {
+      // Teachers can read/write all questions they created
+      allow read, write, delete: if isTeacher() && resource.data.created_by == request.auth.uid;
+      allow create: if isTeacher();
+      // Students can only read questions for their quizzes (indirect via quiz_ids)
+      allow read: if isStudent();
+    }
+
+    // ─── Quizzes Collection ──────────────────────────────────────────────────
+    match /quizzes/{quizId} {
+      // Teacher who owns the batch can read/write
+      allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
+      allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
+      // Students can only read PUBLISHED quizzes for their batch
+      allow read: if isStudent()
+        && studentInBatch(resource.data.batch_id)
+        && resource.data.status == 'published';
+    }
+
+    // ─── Quiz Attempts ────────────────────────────────────────────────────────
+    match /quiz_attempts/{attemptId} {
+      // Students can only read/write their OWN attempts
+      allow read, create: if isStudent() && isOwner(resource.data.student_id);
+      allow create: if isStudent() && isOwner(request.resource.data.student_id);
+      // Students CANNOT update or delete — submissions are final
+      allow update, delete: if false;
+      // Teachers can read all attempts for their quizzes
+      allow read: if isTeacher();
+    }
+
+    // ─── Live Classes ─────────────────────────────────────────────────────────
+    match /live_classes/{liveClassId} {
+      // Teachers can read/write their batch's classes
+      allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
+      allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
+      // Students in the batch can read
+      allow read: if isStudent() && studentInBatch(resource.data.batch_id);
+    }
+
+    // ─── Routine Collection ───────────────────────────────────────────────────
+    match /routine/{routineId} {
+      // Teachers can read/write their batch's routine
+      allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
+      allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
+      // Students in the batch can read
+      allow read: if isStudent() && studentInBatch(resource.data.batch_id);
+    }
+
+    // ─── Notifications ────────────────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      // Teachers can create notifications for their batches
+      allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
+      // Students can read notifications for their batches and mark as read
+      allow read: if isStudent() && studentInBatch(resource.data.batch_id);
+      allow update: if isStudent() && studentInBatch(resource.data.batch_id)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read_by']);
+    }
+
+  }
+}

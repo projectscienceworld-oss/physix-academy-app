@@ -1,176 +1,95 @@
-import React from 'react';
-import { 
-  Clock, 
-  Play, 
-  CheckCircle2, 
-  TrendingUp, 
-  ArrowRight,
-  Zap,
-  BookOpen,
-  HelpCircle
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+'use client';
+
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { Atom, ArrowRight, Play, BookOpen, Users, Trophy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
-export default function DashboardPage() {
+export default function LandingPage() {
+  const { userProfile, loading } = useAuth();
+  const router = useRouter();
+
+  // If user is already logged in, redirect them to their portal
+  useEffect(() => {
+    if (!loading && userProfile) {
+      router.push(userProfile.role === 'teacher' ? '/teacher' : '/student');
+    }
+  }, [userProfile, loading, router]);
+
+  if (loading) return null; // Wait for auth check
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-4xl font-headline font-bold">Welcome back, <span className="text-brand-cobalt">Dr. Fleming</span></h1>
-          <p className="text-muted-foreground mt-2">Here is what's happening in PhysixAcademy today.</p>
-        </div>
-        <Button className="bg-brand-cobalt hover:bg-brand-cobalt/90 h-12 px-6 rounded-xl font-medium">
-          <BookOpen className="mr-2 w-5 h-5" />
-          View Class Notes
-        </Button>
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] -right-[10%] w-[70%] h-[70%] rounded-full bg-brand-cobalt/10 blur-[120px]" />
+        <div className="absolute top-[40%] -left-[20%] w-[60%] h-[60%] rounded-full bg-brand-azure/5 blur-[100px]" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Live Class Timer Card */}
-        <Card className="lg:col-span-2 glass-card overflow-hidden">
-          <CardContent className="p-8 relative">
-            <div className="absolute top-0 right-0 p-8 opacity-10">
-              <Zap className="w-32 h-32 text-brand-azure" />
-            </div>
-            <div className="space-y-6 relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-cobalt/10 text-brand-cobalt text-sm font-semibold border border-brand-cobalt/20">
-                <span className="w-2 h-2 rounded-full bg-brand-cobalt animate-pulse"></span>
-                LIVE IN
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-center">
-                  <span className="text-5xl font-headline font-bold">02</span>
-                  <p className="text-xs text-muted-foreground uppercase mt-1">Hours</p>
-                </div>
-                <span className="text-4xl font-headline font-light text-muted-foreground">:</span>
-                <div className="text-center">
-                  <span className="text-5xl font-headline font-bold">45</span>
-                  <p className="text-xs text-muted-foreground uppercase mt-1">Minutes</p>
-                </div>
-                <span className="text-4xl font-headline font-light text-muted-foreground">:</span>
-                <div className="text-center">
-                  <span className="text-5xl font-headline font-bold text-brand-azure">12</span>
-                  <p className="text-xs text-muted-foreground uppercase mt-1">Seconds</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-2xl font-bold">Quantum Mechanics: Wave-Particle Duality</h3>
-                <p className="text-muted-foreground">Topics: Young's Double Slit, Photoelectric Effect, De Broglie Wavelength</p>
-              </div>
-              <Button asChild size="lg" className="bg-brand-cobalt hover:bg-brand-cobalt/90 rounded-xl px-8 h-12 shadow-xl shadow-brand-cobalt/20">
-                <Link href="/live">Join Live Session</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Stats */}
-        <div className="space-y-6">
-          <Card className="glass-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-brand-azure/10 p-3 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-brand-azure" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Overall Completion</p>
-                <p className="text-2xl font-bold">78%</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-emerald-500/10 p-3 rounded-xl">
-                <CheckCircle2 className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Quiz Success Rate</p>
-                <p className="text-2xl font-bold">85.4%</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="bg-brand-cobalt/10 p-3 rounded-xl">
-                <HelpCircle className="w-6 h-6 text-brand-cobalt" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Problems Solved</p>
-                <p className="text-2xl font-bold">142/200</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Videos */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-headline font-bold">Recent Lectures</h2>
-            <Link href="/videos" className="text-brand-cobalt flex items-center gap-1 text-sm font-medium hover:underline">
-              View all <ArrowRight className="w-4 h-4" />
-            </Link>
+      {/* Navbar */}
+      <header className="container mx-auto px-4 py-6 relative z-10 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-brand-cobalt p-2.5 rounded-xl shadow-lg shadow-brand-cobalt/30">
+            <Atom className="w-6 h-6 text-white" />
           </div>
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <Card key={i} className="glass-card group cursor-pointer hover:border-brand-cobalt/50 transition-all overflow-hidden">
-                <CardContent className="p-0 flex items-center">
-                  <div className="w-32 h-24 bg-muted relative shrink-0">
-                    <img src={`https://picsum.photos/seed/lect${i}/200/150`} alt="Lecture" className="object-cover w-full h-full opacity-60 group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Play className="w-6 h-6 text-white fill-white" />
-                    </div>
-                  </div>
-                  <div className="p-4 flex-1">
-                    <h4 className="font-bold line-clamp-1 group-hover:text-brand-cobalt transition-colors">Maxwell's Equations Simplified</h4>
-                    <p className="text-xs text-muted-foreground mt-1">Electromagnetism • 24 mins</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <span className="font-headline font-bold text-2xl tracking-tight">
+            Physix<span className="text-brand-cobalt">Academy</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <Link href="/auth/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Sign In
+          </Link>
+          <Button asChild className="bg-brand-cobalt hover:bg-brand-cobalt/90 rounded-xl">
+            <Link href="/auth/signup">Get Started</Link>
+          </Button>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="container mx-auto px-4 pt-20 pb-32 relative z-10 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-medium text-muted-foreground mb-8">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          The New Learning Management System is Live
+        </div>
+        
+        <h1 className="text-5xl md:text-7xl font-headline font-bold tracking-tight mb-8 max-w-4xl mx-auto leading-tight">
+          Master Physics with <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cobalt to-brand-azure">Interactive</span> Learning
+        </h1>
+        
+        <p className="text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed">
+          A complete platform for teachers and students. Interactive simulations, step-by-step numericals, live classes, and real-time quiz analytics.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-24">
+          <Button asChild size="lg" className="bg-brand-cobalt hover:bg-brand-cobalt/90 rounded-xl h-14 px-8 text-lg w-full sm:w-auto shadow-xl shadow-brand-cobalt/20">
+            <Link href="/auth/signup">Start Teaching / Learning <ArrowRight className="ml-2 w-5 h-5" /></Link>
+          </Button>
         </div>
 
-        {/* Study Progress */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-headline font-bold">Current Focus</h2>
-          <Card className="glass-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Modern Physics Progress</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Photoelectric Effect</span>
-                  <span className="font-medium">100%</span>
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto text-left">
+          {[
+            { icon: Users, title: "Role-Based Portals", desc: "Dedicated interfaces tailored for both Teachers and Students.", color: "text-brand-cobalt", bg: "bg-brand-cobalt/10" },
+            { icon: Play, title: "PhET Simulations", desc: "Hands-on virtual labs to experiment and understand concepts.", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+            { icon: Trophy, title: "Real-time Quizzes", desc: "Timed assessments with automatic grading and analytics.", color: "text-amber-400", bg: "bg-amber-400/10" },
+            { icon: BookOpen, title: "LaTeX Numericals", desc: "Step-by-step physics problems rendered perfectly.", color: "text-brand-azure", bg: "bg-brand-azure/10" },
+          ].map((feature, i) => (
+            <Card key={i} className="glass-card hover:-translate-y-1 transition-transform duration-300">
+              <CardContent className="p-6">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${feature.bg}`}>
+                  <feature.icon className={`w-6 h-6 ${feature.color}`} />
                 </div>
-                <Progress value={100} className="h-2 bg-white/5" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Compton Scattering</span>
-                  <span className="font-medium">65%</span>
-                </div>
-                <Progress value={65} className="h-2 bg-white/5" />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>X-Ray Production</span>
-                  <span className="font-medium">0%</span>
-                </div>
-                <Progress value={0} className="h-2 bg-white/5" />
-              </div>
-              <Button variant="outline" className="w-full mt-4 border-white/10 hover:bg-brand-cobalt/10 hover:border-brand-cobalt/30 rounded-xl">
-                Continue Last Module
-              </Button>
-            </CardContent>
-          </Card>
+                <h3 className="font-bold text-lg mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{feature.desc}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
