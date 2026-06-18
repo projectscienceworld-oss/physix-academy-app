@@ -39,10 +39,12 @@ service cloud.firestore {
       // Any signed-in user can read their own profile
       allow read: if isSignedIn() && isOwner(userId);
       // Teachers can read any user in their batch (for student progress view)
-      allow read: if isTeacher();
-      // Users can only create their own profile on signup
-      allow create: if isSignedIn() && isOwner(userId);
-      // Users can update their own profile but NOT change their role or score
+      // Note: getUserData() is safe here because teacher profile already exists
+      allow read: if isSignedIn() && getUserData().role == 'teacher';
+      // Users can create their OWN profile on signup (no getUserData call — profile doesn't exist yet)
+      allow create: if isSignedIn() && isOwner(userId)
+        && request.resource.data.keys().hasAll(['name', 'email', 'role', 'batch_ids']);
+      // Users can update their own profile but NOT change their role
       allow update: if isSignedIn() && isOwner(userId)
         && !('role' in request.resource.data.diff(resource.data).affectedKeys());
     }
@@ -55,6 +57,9 @@ service cloud.firestore {
       allow create: if isTeacher();
       // Students can read class they belong to (to get batch info)
       allow read: if isStudent() && classId in getUserData().batch_ids;
+      // Students can update class to join (add themselves to student_ids)
+      allow update: if isSignedIn() && isStudent()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['student_ids']);
     }
 
     // ─── Materials Collection ────────────────────────────────────────────────
