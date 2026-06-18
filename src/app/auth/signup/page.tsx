@@ -38,7 +38,13 @@ export default function SignupPage() {
       setCreatedUser(user);
       setStep('role_setup');
     } catch (err: any) {
-      toast({ title: 'Signup Failed', description: err.message?.replace('Firebase: ', '').replace(/\(.*\)/, ''), variant: 'destructive' });
+      let msg = err.message || 'An error occurred';
+      if (err.code === 'auth/email-already-in-use') msg = 'This email is already registered. Please sign in instead.';
+      else if (err.code === 'auth/invalid-email') msg = 'Please enter a valid email address.';
+      else if (err.code === 'auth/weak-password') msg = 'Your password is too weak. Please use at least 6 characters.';
+      else msg = msg.replace('Firebase: ', '');
+      
+      toast({ title: 'Signup Failed', description: msg, variant: 'destructive' });
     } finally {
       setLoading(false);
     }

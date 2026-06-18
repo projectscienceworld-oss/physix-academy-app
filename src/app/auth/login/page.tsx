@@ -49,9 +49,17 @@ export default function LoginPage() {
         if (attempts > 10) clearInterval(poll);
       }, 300);
     } catch (err: any) {
+      let msg = err.message || 'An error occurred';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        msg = 'Invalid email or password.';
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = 'Too many attempts. Please try again later.';
+      } else {
+        msg = msg.replace('Firebase: ', '');
+      }
       toast({
         title: 'Login Failed',
-        description: err.message?.replace('Firebase: ', '').replace(/\(.*\)/, '') || 'Invalid email or password',
+        description: msg,
         variant: 'destructive',
       });
     } finally {
