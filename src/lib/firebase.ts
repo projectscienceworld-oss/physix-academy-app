@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeAuth, browserLocalPersistence, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -15,7 +15,12 @@ const firebaseConfig = {
 // Prevent re-initializing on hot reload
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+// Use browserLocalPersistence to fix Google Sign-In in Capacitor Android WebView.
+// This stores auth state in localStorage instead of sessionStorage,
+// preventing "missing initial state" errors on OAuth redirects.
+export const auth = getApps().length > 1
+  ? getAuth(app)
+  : initializeAuth(app, { persistence: browserLocalPersistence });
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export default app;

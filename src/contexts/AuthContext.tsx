@@ -8,8 +8,7 @@ import {
   signOut as firebaseSignOut,
   User,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getUserProfile, createUserProfile, updateUserLastActive } from '@/lib/firestore-helpers';
@@ -33,27 +32,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle Google redirect result when app loads
-    getRedirectResult(auth).then(async (result) => {
-      if (result?.user) {
-        const profile = await getUserProfile(result.user.uid);
-        if (!profile) {
-          await createUserProfile(result.user.uid, {
-            name: result.user.displayName || 'New User',
-            email: result.user.email || '',
-            role: 'student',
-            batch_ids: [],
-          });
-        }
-      }
-    }).catch(() => {});
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
         const profile = await getUserProfile(firebaseUser.uid);
         setUserProfile(profile);
-        // Update last active silently
         updateUserLastActive(firebaseUser.uid).catch(() => {});
       } else {
         setUserProfile(null);
@@ -69,9 +52,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
-    // Use redirect instead of popup — popup doesn't work in Android WebView (Capacitor)
-    await signInWithRedirect(auth, provider);
-    // Profile creation is handled in the useEffect getRedirectResult above
+    // signInWithPopup works now that:
+    // 1. Google is enabled in Firebase Console
+    // 2. Auth uses browserLocalPersistence (set in firebase.ts)
+    const result = await signInWithPopup(auth, provider);
+    const profile = await getUserProfile(result.user.uid);
+    if (!profile) {
+      await createUserProfile(result.user.uid, {
+        name: result.user.displayName || 'New User',
+        email: result.user.email || '',
+        role: 'student',
+        batch_ids: [],
+      });
+    }
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name: string, role: UserRole): Promise<User> => {
