@@ -28,6 +28,14 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      # 3.5 Verify Secrets
+      - name: Verify Firebase Secrets
+        run: |
+          if [ -z "${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}" ]; then
+            echo "ERROR: GitHub Secrets are missing! Please add NEXT_PUBLIC_FIREBASE_API_KEY (and the other 5 keys) to your repository secrets in Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
       # 4. Build Next.js static export (outputs to /out)
       - name: Build Next.js static export
         run: npx next build
