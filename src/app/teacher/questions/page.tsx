@@ -50,9 +50,15 @@ export default function QuestionsPage() {
   const loadQuestions = async () => {
     if (!userProfile) return;
     setLoading(true);
-    const qs = await getQuestions(userProfile.id);
-    setQuestions(qs);
-    setLoading(false);
+    try {
+      const qs = await getQuestions(userProfile.id);
+      setQuestions(qs);
+    } catch (err: any) {
+      console.error('Failed to load questions:', err);
+      toast({ title: 'Notice', description: 'Some questions could not be loaded. If this is a new project, you may need to create database indexes.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
