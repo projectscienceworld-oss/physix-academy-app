@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,13 @@ export default function LoginPage() {
     if (role === 'admin') router.push('/admin');
     else router.push(role === 'teacher' ? '/teacher' : '/student');
   };
+
+  useEffect(() => {
+    if (userProfile) {
+      // Auto-redirect if already signed in (e.g., after Google redirect)
+      handleRedirect(userProfile.role);
+    }
+  }, [userProfile, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

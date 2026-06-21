@@ -9,7 +9,10 @@ import {
   User,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
 import { auth } from '@/lib/firebase';
 import { getUserProfile, createUserProfile, updateUserLastActive } from '@/lib/firestore-helpers';
 import type { UserProfile, UserRole } from '@/lib/types';
@@ -32,6 +35,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Handle redirect result from Google Sign-In (mostly for Capacitor/mobile)
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (result?.user) {
+          const profile = await getUserProfile(result.user.uid);
+          if (!profile) {
+            await createUserProfile(result.user.uid, {
+              name: result.user.displayName || 'New User',
+              email: result.user.email || '',
+              role: 'student',
+              batch_ids: [],
+            });
+          }
+        }
+      })
+      .catch((error) => console.error("Google Sign-In Redirect Error:", error));
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
@@ -52,15 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    const profile = await getUserProfile(result.user.uid);
-    if (!profile) {
-      await createUserProfile(result.user.uid, {
-        name: result.user.displayName || 'New User',
-        email: result.user.email || '',
-        role: 'student',
-        batch_ids: [],
-      });
+    if (Capacitor.isNativePlatform()) {
+      await signInWithRedirect(auth, provider);
+    } else {
+      const result = await signInWithPopup(auth, provider);
+      const profile = await getUserProfile(result.user.uid);
+      if (!profile) {
+        await createUserProfile(result.user.uid, {
+          name: result.user.displayName || 'New User',
+          email: result.user.email || '',
+          role: 'student',
+          batch_ids: [],
+        });
+      }
     }
   }, []);
 
