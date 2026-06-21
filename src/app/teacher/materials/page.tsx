@@ -52,23 +52,36 @@ export default function MaterialsPage() {
   const loadData = async () => {
     if (!userProfile) return;
     setLoading(true);
-    const cls = await getTeacherClasses(userProfile.id);
-    setClasses(cls);
-    if (cls.length > 0) {
-      const mats = await getMaterialsForBatch(cls[0].id);
-      setMaterials(mats);
-      setForm(f => ({ ...f, batch_id: cls[0].id }));
+    try {
+      const cls = await getTeacherClasses(userProfile.id);
+      setClasses(cls);
+      if (cls.length > 0) {
+        setForm(f => ({ ...f, batch_id: cls[0].id }));
+        try {
+          const mats = await getMaterialsForBatch(cls[0].id);
+          setMaterials(mats);
+        } catch (err: any) {
+          console.error('Failed to load materials:', err);
+          toast({ title: 'Notice', description: 'Some materials could not be loaded. If this is a new project, you may need to create database indexes.', variant: 'destructive' });
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleFileUpload = async () => {
     const file = selectedFile;
-    if (!file || !form.title || !form.batch_id) {
+    const batchId = form.batch_id || (classes.length > 0 ? classes[0].id : '');
+    
+    if (!file || !form.title || !batchId) {
       const missing = [];
       if (!file) missing.push('File');
       if (!form.title) missing.push('Title');
-      if (!form.batch_id) missing.push('Batch');
+      if (!batchId) missing.push('Batch');
       toast({ title: 'Missing fields', description: `Please provide: ${missing.join(', ')}`, variant: 'destructive' });
       return;
     }
@@ -88,7 +101,7 @@ export default function MaterialsPage() {
       const url = await getDownloadURL(sRef);
       await addMaterial({
         title: form.title, topic: form.topic, description: form.description,
-        type: form.type, batch_id: form.batch_id, file_url: url,
+        type: form.type, batch_id: batchId, file_url: url,
         uploaded_by: userProfile!.id,
       });
       toast({ title: '✅ Uploaded!', description: `${form.title} is now available to students.` });
@@ -105,14 +118,16 @@ export default function MaterialsPage() {
   };
 
   const handleLinkSubmit = async () => {
-    if (!form.title || !form.externalUrl || !form.batch_id) {
+    const batchId = form.batch_id || (classes.length > 0 ? classes[0].id : '');
+    
+    if (!form.title || !form.externalUrl || !batchId) {
       toast({ title: 'Missing fields', description: 'Fill in title and URL', variant: 'destructive' });
       return;
     }
     try {
       await addMaterial({
         title: form.title, topic: form.topic, description: form.description,
-        type: 'link', batch_id: form.batch_id, file_url: form.externalUrl,
+        type: 'link', batch_id: batchId, file_url: form.externalUrl,
         uploaded_by: userProfile!.id,
       });
       toast({ title: '✅ Link added!', description: form.title });
