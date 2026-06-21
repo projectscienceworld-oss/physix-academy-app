@@ -223,6 +223,7 @@ export default function MaterialsPage() {
               <div className="space-y-3">
                 <Label>File</Label>
                 <input ref={fileRef} type="file"
+                  accept={form.type === 'video' ? 'video/*' : form.type === 'audio' ? 'audio/*' : form.type === 'pdf' ? 'application/pdf' : '*/*'}
                   onChange={e => setSelectedFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-cobalt/10 file:text-brand-cobalt hover:file:bg-brand-cobalt/20 cursor-pointer" />
                 {uploadProgress !== null && (
