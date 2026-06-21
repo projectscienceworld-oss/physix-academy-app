@@ -80,20 +80,25 @@ export default function QuestionsPage() {
       toast({ title: 'Select correct answer', variant: 'destructive' }); return;
     }
     setSaving(true);
+    const questionData: any = {
+      topic: form.topic,
+      difficulty: form.difficulty,
+      type: form.type,
+      question_text: form.question_text,
+      options: form.type === 'mcq' ? form.options : [],
+      correct_answer: form.correct_answer,
+      explanation: form.explanation,
+      created_by: userProfile.id,
+    };
+    if (form.type === 'numerical') {
+      const steps = form.solution_steps.filter(Boolean);
+      if (steps.length > 0) questionData.solution_steps = steps;
+      if (form.key_formula) questionData.key_formula = form.key_formula;
+    }
+    if (form.image_url) questionData.image_url = form.image_url;
+
     try {
-      await addQuestion({
-        topic: form.topic,
-        difficulty: form.difficulty,
-        type: form.type,
-        question_text: form.question_text,
-        options: form.type === 'mcq' ? form.options : [],
-        correct_answer: form.correct_answer,
-        explanation: form.explanation,
-        solution_steps: form.type === 'numerical' ? form.solution_steps.filter(Boolean) : undefined,
-        key_formula: form.type === 'numerical' ? form.key_formula : undefined,
-        image_url: form.image_url || undefined,
-        created_by: userProfile.id,
-      });
+      await addQuestion(questionData as any);
       toast({ title: '✅ Question saved!' });
       setForm(emptyForm);
       setShowForm(false);

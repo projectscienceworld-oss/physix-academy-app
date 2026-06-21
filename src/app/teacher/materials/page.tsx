@@ -36,6 +36,7 @@ export default function MaterialsPage() {
   const [uploading, setUploading] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -62,7 +63,7 @@ export default function MaterialsPage() {
   };
 
   const handleFileUpload = async () => {
-    const file = fileRef.current?.files?.[0];
+    const file = selectedFile;
     if (!file || !form.title || !form.batch_id) {
       toast({ title: 'Missing fields', description: 'Please fill in title and select a file', variant: 'destructive' });
       return;
@@ -89,6 +90,7 @@ export default function MaterialsPage() {
       toast({ title: '✅ Uploaded!', description: `${form.title} is now available to students.` });
       setShowForm(false);
       setUploadProgress(null);
+      setSelectedFile(null);
       if (fileRef.current) fileRef.current.value = '';
       await loadData();
     } catch (err: any) {
@@ -202,6 +204,7 @@ export default function MaterialsPage() {
               <div className="space-y-3">
                 <Label>File</Label>
                 <input ref={fileRef} type="file" accept="video/*,audio/*,.pdf"
+                  onChange={e => setSelectedFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-cobalt/10 file:text-brand-cobalt hover:file:bg-brand-cobalt/20 cursor-pointer" />
                 {uploadProgress !== null && (
                   <div className="space-y-1">
