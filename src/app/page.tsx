@@ -15,7 +15,8 @@ export default function LandingPage() {
   // If user is already logged in, redirect them to their portal
   useEffect(() => {
     if (!loading && userProfile) {
-      router.push(userProfile.role === 'teacher' ? '/teacher' : '/student');
+      if (userProfile.role === 'admin') router.push('/admin');
+      else router.push(userProfile.role === 'teacher' ? '/teacher' : '/student');
     }
   }, [userProfile, loading, router]);
 

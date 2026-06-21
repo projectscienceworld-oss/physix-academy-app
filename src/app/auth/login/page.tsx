@@ -22,7 +22,8 @@ export default function LoginPage() {
 
   const handleRedirect = (role: string) => {
     document.cookie = `user_role=${role}; path=/; max-age=86400`;
-    router.push(role === 'teacher' ? '/teacher' : '/student');
+    if (role === 'admin') router.push('/admin');
+    else router.push(role === 'teacher' ? '/teacher' : '/student');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

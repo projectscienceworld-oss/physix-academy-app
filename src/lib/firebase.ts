@@ -12,13 +12,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "dummy_app_id",
 };
 
+// Track whether the app was already initialized before this module ran
+const alreadyInitialized = getApps().length > 0;
+
 // Prevent re-initializing on hot reload
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const app = alreadyInitialized ? getApp() : initializeApp(firebaseConfig);
 
 // Use browserLocalPersistence to fix Google Sign-In in Capacitor Android WebView.
 // This stores auth state in localStorage instead of sessionStorage,
 // preventing "missing initial state" errors on OAuth redirects.
-export const auth = getApps().length > 1
+// Only call initializeAuth once (on first init); use getAuth on subsequent module loads.
+export const auth = alreadyInitialized
   ? getAuth(app)
   : initializeAuth(app, { persistence: browserLocalPersistence });
 export const db = getFirestore(app);

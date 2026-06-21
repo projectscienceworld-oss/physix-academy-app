@@ -250,3 +250,67 @@ export async function markNotificationRead(notificationId: string, userId: strin
     await updateDoc(ref, { read_by: [...readBy, userId] });
   }
 }
+
+// ─── Admin Helpers ────────────────────────────────────────────────────────────
+export async function getAllUsers(): Promise<UserProfile[]> {
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as UserProfile);
+}
+
+export async function getAllClasses(): Promise<Class[]> {
+  const snap = await getDocs(collection(db, 'classes'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Class);
+}
+
+export async function getAllMaterials(): Promise<Material[]> {
+  const q = query(collection(db, 'materials'), orderBy('uploaded_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Material);
+}
+
+export async function getAllQuestions(): Promise<Question[]> {
+  const q = query(collection(db, 'questions'), orderBy('created_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Question);
+}
+
+export async function getAllQuizzes(): Promise<Quiz[]> {
+  const q = query(collection(db, 'quizzes'), orderBy('created_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as Quiz);
+}
+
+export async function getAllQuizAttempts(): Promise<QuizAttempt[]> {
+  const q = query(collection(db, 'quiz_attempts'), orderBy('submitted_at', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }) as QuizAttempt);
+}
+
+export async function adminUpdateUser(uid: string, data: Partial<Omit<UserProfile, 'id'>>) {
+  await updateDoc(doc(db, 'users', uid), data as Record<string, unknown>);
+}
+
+export async function adminDeleteUserProfile(uid: string) {
+  await deleteDoc(doc(db, 'users', uid));
+}
+
+export async function adminDeleteClass(classId: string) {
+  await deleteDoc(doc(db, 'classes', classId));
+}
+
+export async function adminUpdateMaterial(id: string, data: Partial<Material>) {
+  await updateDoc(doc(db, 'materials', id), data as Record<string, unknown>);
+}
+
+export async function adminUpdateQuestion(id: string, data: Partial<Question>) {
+  await updateDoc(doc(db, 'questions', id), data as Record<string, unknown>);
+}
+
+export async function adminDeleteQuestion(id: string) {
+  await deleteDoc(doc(db, 'questions', id));
+}
+
+export async function adminDeleteQuiz(id: string) {
+  await deleteDoc(doc(db, 'quizzes', id));
+}
+

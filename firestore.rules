@@ -15,6 +15,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
     function isTeacher() {
       return isSignedIn() && getUserData().role == 'teacher';
     }
@@ -36,12 +40,13 @@ service cloud.firestore {
 
     // ─── Users Collection ────────────────────────────────────────────────────
     match /users/{userId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Any signed-in user can read their own profile
       allow read: if isSignedIn() && isOwner(userId);
       // Teachers can read any user in their batch (for student progress view)
-      // Note: getUserData() is safe here because teacher profile already exists
       allow read: if isSignedIn() && getUserData().role == 'teacher';
-      // Users can create their OWN profile on signup (no getUserData call — profile doesn't exist yet)
+      // Users can create their OWN profile on signup
       allow create: if isSignedIn() && isOwner(userId)
         && request.resource.data.keys().hasAll(['name', 'email', 'role', 'batch_ids']);
       // Users can update their own profile but NOT change their role
@@ -51,40 +56,48 @@ service cloud.firestore {
 
     // ─── Classes Collection ──────────────────────────────────────────────────
     match /classes/{classId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teachers can read/write/create their own classes
       allow read, write: if isTeacher() &&
         (resource == null || resource.data.teacher_id == request.auth.uid);
       allow create: if isTeacher();
-      // Students can read class they belong to (to get batch info)
+      // Students can read class they belong to
       allow read: if isStudent() && classId in getUserData().batch_ids;
-      // Students can update class to join (add themselves to student_ids)
+      // Students can update class to join
       allow update: if isSignedIn() && isStudent()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['student_ids']);
     }
 
     // ─── Materials Collection ────────────────────────────────────────────────
     match /materials/{materialId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teacher who owns the batch can read/write
       allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
       allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
       // Students in the batch can read only
       allow read: if isStudent() && studentInBatch(resource.data.batch_id);
-      // Students can update ONLY the completed_by array (marking completion)
+      // Students can update ONLY the completed_by array
       allow update: if isStudent() && studentInBatch(resource.data.batch_id)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['completed_by']);
     }
 
     // ─── Questions Collection ────────────────────────────────────────────────
     match /questions/{questionId} {
-      // Teachers can read/write all questions they created
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
+      // Teachers can read/write questions they created
       allow read, write, delete: if isTeacher() && resource.data.created_by == request.auth.uid;
       allow create: if isTeacher();
-      // Students can only read questions for their quizzes (indirect via quiz_ids)
+      // Students can read questions
       allow read: if isStudent();
     }
 
     // ─── Quizzes Collection ──────────────────────────────────────────────────
     match /quizzes/{quizId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teacher who owns the batch can read/write
       allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
       allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
@@ -96,6 +109,8 @@ service cloud.firestore {
 
     // ─── Quiz Attempts ────────────────────────────────────────────────────────
     match /quiz_attempts/{attemptId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Students can only read/write their OWN attempts
       allow read, create: if isStudent() && isOwner(resource.data.student_id);
       allow create: if isStudent() && isOwner(request.resource.data.student_id);
@@ -107,6 +122,8 @@ service cloud.firestore {
 
     // ─── Live Classes ─────────────────────────────────────────────────────────
     match /live_classes/{liveClassId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teachers can read/write their batch's classes
       allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
       allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
@@ -116,6 +133,8 @@ service cloud.firestore {
 
     // ─── Routine Collection ───────────────────────────────────────────────────
     match /routine/{routineId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teachers can read/write their batch's routine
       allow read, write, delete: if isTeacher() && teacherOwnsBatch(resource.data.batch_id);
       allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
@@ -125,6 +144,8 @@ service cloud.firestore {
 
     // ─── Notifications ────────────────────────────────────────────────────────
     match /notifications/{notificationId} {
+      // Admin: full access
+      allow read, write, delete: if isAdmin();
       // Teachers can create notifications for their batches
       allow create: if isTeacher() && teacherOwnsBatch(request.resource.data.batch_id);
       // Students can read notifications for their batches and mark as read

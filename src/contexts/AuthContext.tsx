@@ -52,9 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
-    // signInWithPopup works now that:
-    // 1. Google is enabled in Firebase Console
-    // 2. Auth uses browserLocalPersistence (set in firebase.ts)
     const result = await signInWithPopup(auth, provider);
     const profile = await getUserProfile(result.user.uid);
     if (!profile) {

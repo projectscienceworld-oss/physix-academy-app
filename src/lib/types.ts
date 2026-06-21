@@ -11,7 +11,7 @@ export type PhysicsTopic =
   | 'Modern Physics';
 
 // ─── User / Auth ─────────────────────────────────────────────────────────────
-export type UserRole = 'teacher' | 'student';
+export type UserRole = 'teacher' | 'student' | 'admin';
 
 export interface UserProfile {
   id: string;

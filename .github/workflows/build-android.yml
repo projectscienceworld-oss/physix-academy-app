@@ -28,15 +28,17 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
-      # 3.5 Verify Secrets
+      # 4. Verify Firebase Secrets
       - name: Verify Firebase Secrets
         run: |
           if [ -z "${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}" ]; then
-            echo "ERROR: GitHub Secrets are missing! Please add NEXT_PUBLIC_FIREBASE_API_KEY (and the other 5 keys) to your repository secrets in Settings > Secrets and variables > Actions."
+            echo "ERROR: GitHub Secrets are missing! Please add NEXT_PUBLIC_FIREBASE_API_KEY (and the other Firebase keys) to your repository secrets."
+            echo "Go to: Settings > Secrets and variables > Actions > New repository secret"
             exit 1
           fi
+          echo "✅ Firebase secrets verified."
 
-      # 4. Build Next.js static export (outputs to /out)
+      # 5. Build Next.js static export (outputs to /out)
       - name: Build Next.js static export
         run: npx next build
         env:
@@ -47,32 +49,85 @@ jobs:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
           NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-      # 5. Set up Java 17 (required by Gradle/Android)
+      # 6. Verify that the Next.js out/ folder was created
+      - name: Verify static export output
+        run: |
+          if [ ! -d "out" ]; then
+            echo "ERROR: Next.js static export failed — 'out' directory not found!"
+            exit 1
+          fi
+          echo "✅ Static export output verified. Files:"
+          ls -la out/
+
+      # 7. Set up Java 21 (required by Gradle/Android)
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
-      # 6. Set up Android SDK
+      # 8. Set up Android SDK
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # 7. Sync Capacitor web assets into android/ project
+      # 9. Install required Android SDK components
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install "platforms;android-36" "build-tools;35.0.0" "platform-tools" 2>&1 | tail -5
+          echo "✅ Android SDK components installed."
+
+      # 10. Sync Capacitor web assets into android/ project
       - name: Capacitor sync
         run: npx cap sync android
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
 
-      # 8. Make gradlew executable
+      # 11. Make gradlew executable
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      # 9. Build debug APK
+      # 12. Configure Gradle memory
+      - name: Configure Gradle memory
+        run: |
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m -XX:+HeapDumpOnOutOfMemoryError" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+          echo "org.gradle.parallel=false" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+
+      # 13. Cache Gradle dependencies
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 14. Build debug APK
       - name: Build debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
         working-directory: android
 
-      # 10. Upload APK as downloadable artifact
+      # 15. Verify APK was created
+      - name: Verify APK output
+        run: |
+          if [ ! -f "android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "ERROR: Debug APK not found!"
+            exit 1
+          fi
+          echo "✅ APK built successfully!"
+          ls -lh android/app/build/outputs/apk/debug/
+
+      # 16. Upload APK as downloadable artifact
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -80,9 +135,9 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
 
-      # 11. (Optional) Also build release APK (unsigned)
+      # 17. (Optional) Build release APK (unsigned)
       - name: Build release APK (unsigned)
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
         working-directory: android
         continue-on-error: true
 
