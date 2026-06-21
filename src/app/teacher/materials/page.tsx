@@ -65,7 +65,11 @@ export default function MaterialsPage() {
   const handleFileUpload = async () => {
     const file = selectedFile;
     if (!file || !form.title || !form.batch_id) {
-      toast({ title: 'Missing fields', description: 'Please fill in title and select a file', variant: 'destructive' });
+      const missing = [];
+      if (!file) missing.push('File');
+      if (!form.title) missing.push('Title');
+      if (!form.batch_id) missing.push('Batch');
+      toast({ title: 'Missing fields', description: `Please provide: ${missing.join(', ')}`, variant: 'destructive' });
       return;
     }
     setUploading(true);
@@ -203,7 +207,7 @@ export default function MaterialsPage() {
             {uploadMode === 'file' ? (
               <div className="space-y-3">
                 <Label>File</Label>
-                <input ref={fileRef} type="file" accept="video/*,audio/*,.pdf"
+                <input ref={fileRef} type="file"
                   onChange={e => setSelectedFile(e.target.files?.[0] || null)}
                   className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-brand-cobalt/10 file:text-brand-cobalt hover:file:bg-brand-cobalt/20 cursor-pointer" />
                 {uploadProgress !== null && (
