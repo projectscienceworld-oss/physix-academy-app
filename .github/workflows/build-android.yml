@@ -40,9 +40,13 @@ jobs:
 
       # 5. Build Next.js static export (outputs to /out)
       - name: Build Next.js static export
-        run: npx next build
+        run: |
+          rm -rf src/app/api
+          npx next build
         env:
           NODE_ENV: production
+          BUILD_STATIC: "true"
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}

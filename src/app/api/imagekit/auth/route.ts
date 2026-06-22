@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import ImageKit from 'imagekit';
 
-export const dynamic = 'force-static';
-
 export async function GET() {
   try {
     if (!process.env.IMAGEKIT_PRIVATE_KEY) {

@@ -86,7 +86,7 @@ export default function MaterialsPage() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      const authRes = await fetch('/api/imagekit/auth');
+      const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/imagekit/auth`);
       const authData = await authRes.json();
       
       const formData = new FormData();
@@ -162,7 +162,7 @@ export default function MaterialsPage() {
     try {
       if (mat.type !== 'link' && mat.file_id) {
         try {
-          await fetch('/api/imagekit/delete', {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/imagekit/delete`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileId: mat.file_id })

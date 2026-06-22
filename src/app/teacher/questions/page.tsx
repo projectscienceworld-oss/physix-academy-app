@@ -65,7 +65,7 @@ export default function QuestionsPage() {
     if (!file || !userProfile) return;
     setImageUploading(true);
     try {
-      const authRes = await fetch('/api/imagekit/auth');
+      const authRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/imagekit/auth`);
       const authData = await authRes.json();
       
       const formData = new FormData();
@@ -140,7 +140,7 @@ export default function QuestionsPage() {
     const question = questions.find(q => q.id === id);
     if (question?.file_id) {
       try {
-        await fetch('/api/imagekit/delete', {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/imagekit/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ fileId: question.file_id })
