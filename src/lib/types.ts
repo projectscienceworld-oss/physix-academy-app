@@ -42,6 +42,7 @@ export interface Material {
   type: MaterialType;
   title: string;
   file_url: string;
+  file_id?: string;
   topic: PhysicsTopic;
   uploaded_by: string; // uid
   uploaded_at: Timestamp;
@@ -67,6 +68,7 @@ export interface Question {
   solution_steps?: string[]; // for numerical
   key_formula?: string;
   image_url?: string;
+  file_id?: string;
   created_by: string; // teacher uid
   created_at: Timestamp;
 }

@@ -3,8 +3,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getTeacherClasses, getMaterialsForBatch, addMaterial, deleteMaterial } from '@/lib/firestore-helpers';
-import { storage } from '@/lib/firebase';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,26 +86,40 @@ export default function MaterialsPage() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      const path = `materials/${form.batch_id}/${Date.now()}_${file.name}`;
-      const sRef = storageRef(storage, path);
+      const authRes = await fetch('/api/imagekit/auth');
+      const authData = await authRes.json();
       
-      // Fix for Capacitor/Android WebView: Convert File to Blob and specify contentType
-      const fileBuffer = await file.arrayBuffer();
-      const fileBlob = new Blob([fileBuffer], { type: file.type });
-      const metadata = { contentType: file.type || 'application/octet-stream' };
-      
-      const task = uploadBytesResumable(sRef, fileBlob, metadata);
-      await new Promise<void>((resolve, reject) => {
-        task.on('state_changed',
-          snap => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-          reject,
-          resolve
-        );
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', file.name);
+      formData.append('signature', authData.signature);
+      formData.append('expire', authData.expire.toString());
+      formData.append('token', authData.token);
+      formData.append('publicKey', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || '');
+      formData.append('folder', `/materials/${batchId}`);
+
+      const uploadData = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            reject(new Error(JSON.parse(xhr.responseText).message || 'Upload failed'));
+          }
+        });
+        xhr.addEventListener('error', () => reject(new Error('Upload failed')));
+        xhr.open('POST', 'https://upload.imagekit.io/api/v1/files/upload');
+        xhr.send(formData);
       });
-      const url = await getDownloadURL(sRef);
+
       await addMaterial({
         title: form.title, topic: form.topic, description: form.description,
-        type: form.type, batch_id: batchId, file_url: url,
+        type: form.type, batch_id: batchId, file_url: uploadData.url, file_id: uploadData.fileId,
         uploaded_by: userProfile!.id,
       });
       toast({ title: '✅ Uploaded!', description: `${form.title} is now available to students.` });
@@ -148,10 +160,16 @@ export default function MaterialsPage() {
   const handleDelete = async (mat: Material) => {
     if (!confirm(`Delete "${mat.title}"?`)) return;
     try {
-      await deleteMaterial(mat.id);
-      if (mat.type !== 'link') {
-        try { await deleteObject(storageRef(storage, mat.file_url)); } catch {}
+      if (mat.type !== 'link' && mat.file_id) {
+        try {
+          await fetch('/api/imagekit/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId: mat.file_id })
+          });
+        } catch {}
       }
+      await deleteMaterial(mat.id);
       setMaterials(m => m.filter(x => x.id !== mat.id));
       toast({ title: 'Deleted', description: mat.title });
     } catch (err: any) {

@@ -3,8 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getQuestions, addQuestion, deleteQuestion } from '@/lib/firestore-helpers';
-import { storage } from '@/lib/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +26,7 @@ const emptyForm = {
   solution_steps: [''],
   key_formula: '',
   image_url: '',
+  file_id: '',
 };
 
 export default function QuestionsPage() {
@@ -66,10 +65,27 @@ export default function QuestionsPage() {
     if (!file || !userProfile) return;
     setImageUploading(true);
     try {
-      const sRef = storageRef(storage, `question-images/${userProfile.id}/${Date.now()}_${file.name}`);
-      await uploadBytes(sRef, file);
-      const url = await getDownloadURL(sRef);
-      setForm(f => ({ ...f, image_url: url }));
+      const authRes = await fetch('/api/imagekit/auth');
+      const authData = await authRes.json();
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', file.name);
+      formData.append('signature', authData.signature);
+      formData.append('expire', authData.expire.toString());
+      formData.append('token', authData.token);
+      formData.append('publicKey', process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || '');
+      formData.append('folder', `/question-images/${userProfile.id}`);
+
+      const uploadRes = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+      
+      if (!uploadRes.ok) throw new Error(uploadData.message || 'Upload failed');
+
+      setForm(f => ({ ...f, image_url: uploadData.url, file_id: uploadData.fileId }));
       toast({ title: 'Image uploaded' });
     } catch (err: any) {
       toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
@@ -101,7 +117,10 @@ export default function QuestionsPage() {
       if (steps.length > 0) questionData.solution_steps = steps;
       if (form.key_formula) questionData.key_formula = form.key_formula;
     }
-    if (form.image_url) questionData.image_url = form.image_url;
+    if (form.image_url) {
+      questionData.image_url = form.image_url;
+      if (form.file_id) questionData.file_id = form.file_id;
+    }
 
     try {
       await addQuestion(questionData as any);
@@ -118,6 +137,16 @@ export default function QuestionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this question?')) return;
+    const question = questions.find(q => q.id === id);
+    if (question?.file_id) {
+      try {
+        await fetch('/api/imagekit/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileId: question.file_id })
+        });
+      } catch (e) {}
+    }
     await deleteQuestion(id);
     setQuestions(q => q.filter(x => x.id !== id));
     toast({ title: 'Deleted' });
