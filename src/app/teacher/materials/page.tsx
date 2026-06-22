@@ -90,7 +90,13 @@ export default function MaterialsPage() {
     try {
       const path = `materials/${form.batch_id}/${Date.now()}_${file.name}`;
       const sRef = storageRef(storage, path);
-      const task = uploadBytesResumable(sRef, file);
+      
+      // Fix for Capacitor/Android WebView: Convert File to Blob and specify contentType
+      const fileBuffer = await file.arrayBuffer();
+      const fileBlob = new Blob([fileBuffer], { type: file.type });
+      const metadata = { contentType: file.type || 'application/octet-stream' };
+      
+      const task = uploadBytesResumable(sRef, fileBlob, metadata);
       await new Promise<void>((resolve, reject) => {
         task.on('state_changed',
           snap => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
@@ -111,6 +117,7 @@ export default function MaterialsPage() {
       if (fileRef.current) fileRef.current.value = '';
       await loadData();
     } catch (err: any) {
+      setUploadProgress(null);
       toast({ title: 'Upload Failed', description: err.message, variant: 'destructive' });
     } finally {
       setUploading(false);
